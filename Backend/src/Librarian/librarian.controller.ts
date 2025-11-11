@@ -16,11 +16,6 @@ import { CreateLibrarianDto } from './dto/create-librarian.dto';
 export class LibrarianController {
   constructor(private readonly librarianService: LibrarianService) {}
 
-  @Post()
-  createLibrarian(@Body() data: CreateLibrarianDto) {
-    return this.librarianService.createLibrarian(data);
-  }
-
   @Get()
   getAllLibrarians() {
     return this.librarianService.getAllLibrarians();
@@ -29,6 +24,11 @@ export class LibrarianController {
   @Get(':id')
   getLibrarianById(@Param('id') id: string) {
     return this.librarianService.getLibrarianById(Number(id));
+  }
+
+  @Post()
+  createLibrarian(@Body() data: CreateLibrarianDto) {
+    return this.librarianService.createLibrarian(data);
   }
 
   @Delete(':id')
@@ -48,5 +48,9 @@ export class LibrarianController {
     @Body() data: Partial<CreateLibrarianDto>,
   ) {
     return this.librarianService.partialUpdateLibrarian(Number(id), data);
+  }
+  @Get(':id/role/:role')
+  assignRole(@Param('id') id: string, @Param('role') role: string) {
+    return this.librarianService.assignRole(Number(id), role);
   }
 }

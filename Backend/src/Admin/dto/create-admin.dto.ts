@@ -16,7 +16,7 @@ export class CreateAdminDto {
   @IsIn(['male', 'female'], { message: 'Gender must be male or female!' })
   gender: string;
 
-  @IsNumberString({}, { message: 'Phone number must contain only numbers!' })
+  @IsNumberString({}, { message: 'invalid phone!' })
   phone: string;
 
   role?: string;
