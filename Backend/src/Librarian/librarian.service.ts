@@ -28,7 +28,7 @@ export class LibrarianService {
     const newLibrarian = this.librarianRepository.create(data);
     
     // Step 3: Save to database
-    // ✅ @BeforeInsert hook will trigger here
+    // @BeforeInsert hook will trigger here
     const saved = await this.librarianRepository.save(newLibrarian);
     
     console.log('New Librarian Created:', saved);
@@ -39,6 +39,16 @@ export class LibrarianService {
     // Query from database, not in-memory array
     return await this.librarianRepository.find();
   }
+
+  // librarian.service.ts
+async findUsersWithNullFullName(): Promise<LibrarianEntity[]> {
+  return await this.librarianRepository.find({
+    where: {
+      fullName: null,
+    },
+  });
+}
+
 
   async getLibrarianById(id: number): Promise<LibrarianEntity> {
     const librarian = await this.librarianRepository.findOne({ where: { id } });

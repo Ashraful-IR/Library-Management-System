@@ -23,7 +23,7 @@ export class LibrarianEntity {
   @Column()
   gender: string;
 
-  @Column({ type: 'bigint', unsigned: true ,nullable: true})
+  @Column({ type: 'bigint', unsigned: true, nullable: true })
   phone: number;
 
   @Column()
@@ -38,10 +38,10 @@ export class LibrarianEntity {
     this.id = Math.floor(100000 + Math.random() * 900000);
     console.log('Custom ID generated:', this.id);
 
-    /*
+    
     if (!this.fullName)
     this.fullName = `${this.firstName} ${this.lastName}`;
-    */
+    
 
   }
 }

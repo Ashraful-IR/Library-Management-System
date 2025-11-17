@@ -7,6 +7,7 @@ import {
   Delete,
   Put,
   Patch,
+  ValidationPipe,
 } from '@nestjs/common';
 
 import { LibrarianService } from './librarian.service';
@@ -21,14 +22,23 @@ export class LibrarianController {
     return this.librarianService.getAllLibrarians();
   }
 
+  @Get('fullName-null')
+  async getUsersWithNullFullName() {
+    return await this.librarianService.findUsersWithNullFullName();
+  }
+
   @Get(':id')
   getLibrarianById(@Param('id') id: string) {
     return this.librarianService.getLibrarianById(Number(id));
   }
 
   @Post()
-  createLibrarian(@Body() data: CreateLibrarianDto) {
-    return this.librarianService.createLibrarian(data);
+  async create(
+    // ValidationPipe applies all @IsXxx decorators
+    @Body(new ValidationPipe())
+    createLibrarianDto: CreateLibrarianDto,
+  ) {
+    return await this.librarianService.createLibrarian(createLibrarianDto);
   }
 
   @Delete(':id')
