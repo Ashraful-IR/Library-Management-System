@@ -8,6 +8,7 @@ import {
   Param,
   Body,
   Query,
+  BadRequestException,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
@@ -71,17 +72,17 @@ export class AdminController {
     return this.adminService.assignRole(Number(id), role);
   }
 
-  @Patch(':id/status')
-  changeStatus(
-    @Param('id') id: string,
-    @Body('status') status: string,
-  ): Promise<any> {
-    const adminStatus = status as AdminStatus;
+ @Patch(':id/status')
+ changeStatus(
+  @Param('id') id: string,
+  @Body('status') status: string,
+): Promise<any> {
+  const adminStatus = status as AdminStatus;
 
-    if (!['active', 'inactive'].includes(adminStatus)) {
-      throw new Error('Status must be either active or inactive');
-    }
-
-    return this.adminService.changeStatus(Number(id), adminStatus);
+  if (!['active', 'inactive'].includes(adminStatus)) {
+    throw new BadRequestException('Status must be either active or inactive');
   }
+
+  return this.adminService.changeStatus(Number(id), adminStatus);
+}
 }

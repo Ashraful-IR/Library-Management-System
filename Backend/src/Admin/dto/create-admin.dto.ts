@@ -37,8 +37,8 @@ export class CreateAdminDto {
   age: number;
 
   @IsOptional()
-  @IsIn(['admin', 'moderator', 'editor'], {
-    message: 'Role must be admin, moderator, or editor!',
+  @IsIn(['admin', 'librarian', ], {
+    message: 'Role must be admin, librarian',
   })
   role?: string;
 
