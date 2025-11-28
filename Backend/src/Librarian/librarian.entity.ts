@@ -1,18 +1,42 @@
-import { Entity, Column, PrimaryColumn, BeforeInsert } from 'typeorm';
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  BeforeInsert,
+  OneToOne,
+  JoinColumn,
+  ManyToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { Admin } from '../Admin/admin.entity';
 
-@Entity('librarian')
+// One-to-one table: extra info about librarian
+@Entity('librarian_profiles')
+export class LibrarianProfile {
+  @PrimaryColumn('int')
+  id: number;
+
+  @Column({ nullable: true, length: 255 })
+  address?: string;
+
+  @Column({ nullable: true, length: 255 })
+  bio?: string;
+}
+
+@Entity('librarians')
 export class LibrarianEntity {
-  @PrimaryColumn('int')  //Change to @PrimaryColumn
-  id: number;  //Change to string for custom format
+  @PrimaryColumn('int')
+  id: number;
 
-  @Column({ name: 'firstName' })
+  @Column({ length: 100 })
   firstName: string;
 
-  @Column()
+  @Column({ length: 100 })
   lastName: string;
 
-  @Column({ nullable: true})
-  fullName: string;
+  @Column({ length: 200, nullable: true })
+  fullName?: string;
 
   @Column({ unique: true })
   email: string;
@@ -20,29 +44,45 @@ export class LibrarianEntity {
   @Column()
   password: string;
 
-  @Column()
-  gender: string;
+  @Column({ length: 20 })
+  phone: string;
 
-  @Column({ type: 'bigint', unsigned: true, nullable: true })
-  phone: number;
+  @Column('int')
+  age: number;
 
-  @Column()
+  @Column({ length: 50, default: 'Librarian' })
   designation: string;
 
   @Column({ default: true })
   isActive: boolean;
 
- @BeforeInsert()
-  generateId() {
-    // Generate custom ID format: numeric 6-digit number (100000 - 999999)
-    this.id = Math.floor(100000 + Math.random() * 900000);
-    console.log('Custom ID generated:', this.id);
+  // One-to-one relation with profile
+  @OneToOne(() => LibrarianProfile, { cascade: true, eager: true, nullable: true })
+  @JoinColumn()
+  profile?: LibrarianProfile;
 
-    /*
-    if (!this.fullName)
-    this.fullName = `${this.firstName} ${this.lastName}`;
-    */
-    
+  // Many librarians supervised by one admin (One-to-Many from Admin side)
+  @ManyToOne(() => Admin, (admin) => (admin as any).librarians, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  supervisor?: Admin;
 
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  @BeforeInsert()
+  generateIdAndFullName() {
+    // custom 6-digit numeric id
+    if (!this.id) {
+      this.id = Math.floor(100000 + Math.random() * 900000);
+    }
+    // full name auto build
+    if (!this.fullName) {
+      this.fullName = `${this.firstName} ${this.lastName}`;
+    }
   }
 }

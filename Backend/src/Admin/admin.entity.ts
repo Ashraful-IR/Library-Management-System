@@ -1,4 +1,15 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  OneToOne,
+  CreateDateColumn,
+  UpdateDateColumn,
+  JoinColumn,
+} from 'typeorm';
+import { LibrarianEntity } from '../Librarian/librarian.entity';
+import { AdminProfile } from './admin.profile.entity';
 
 export enum AdminStatus {
   ACTIVE = 'active',
@@ -7,51 +18,26 @@ export enum AdminStatus {
 
 @Entity('admins')
 export class Admin {
-  @PrimaryGeneratedColumn('increment')
+  @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({
-    type: 'varchar',
-    length: 100,
-    nullable: false,
-  })
+  @Column()
   fullName: string;
 
-  @Column({
-    type: 'varchar',
-    length: 255,
-    unique: true,
-    nullable: false,
-  })
+  @Column({ unique: true })
   email: string;
 
-  @Column({
-    type: 'varchar',
-    length: 255,
-    nullable: false,
-  })
+  @Column()
   password: string;
 
-  @Column({
-    type: 'varchar',
-    length: 20,
-    nullable: false,
-  })
-  gender: string;
-
-  @Column({
-    type: 'varchar',
-    length: 20,
-    nullable: false,
-  })
+  @Column()
   phone: string;
 
-  @Column({
-    type: 'int',
-    unsigned: true,
-    nullable: false,
-  })
+  @Column()
   age: number;
+
+  @Column({ default: 'admin' })
+  role: string;
 
   @Column({
     type: 'enum',
@@ -60,23 +46,22 @@ export class Admin {
   })
   status: AdminStatus;
 
-  @Column({
-    type: 'varchar',
-    length: 50,
+  @OneToOne(() => AdminProfile, (profile) => profile.admin, {
+    cascade: true,
+    eager: true,
     nullable: true,
   })
-  role?: string;
+  @JoinColumn()
+  profile?: AdminProfile;
 
-  @Column({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP',
-  })
+  @OneToMany(() => LibrarianEntity, (l) => l.supervisor)
+  librarians: LibrarianEntity[];
+
+  @CreateDateColumn()
   createdAt: Date;
 
-  @Column({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP',
-    onUpdate: 'CURRENT_TIMESTAMP',
-  })
+  @UpdateDateColumn()
   updatedAt: Date;
 }
+export { AdminProfile };
+

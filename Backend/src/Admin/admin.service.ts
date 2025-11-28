@@ -2,134 +2,248 @@ import {
   Injectable,
   BadRequestException,
   NotFoundException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { validate } from 'class-validator';
-import { Admin, AdminStatus } from './admin.entity';
-import { CreateAdminDto } from './dto/create-admin.dto';
+import { Repository, Like } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
+import { MailerService } from '@nestjs-modules/mailer';
+
+import { Admin, AdminProfile, AdminStatus } from './admin.entity';
+import { LibrarianEntity } from '../Librarian/librarian.entity';
+import {
+  CreateAdminDto,
+  UpdateAdminDto,
+  LoginAdminDto,
+  CreateAdminProfileDto,
+} from './dto/create-admin.dto';
 
 @Injectable()
 export class AdminService {
   constructor(
     @InjectRepository(Admin)
     private readonly adminRepository: Repository<Admin>,
+    @InjectRepository(AdminProfile)
+    private readonly profileRepository: Repository<AdminProfile>,
+    @InjectRepository(LibrarianEntity)
+    private readonly librarianRepository: Repository<LibrarianEntity>,
+    private readonly jwtService: JwtService,
+    private readonly mailerService: MailerService,
   ) {}
 
-  async createAdmin(data: CreateAdminDto): Promise<Admin> {
-    const dto = Object.assign(new CreateAdminDto(), data);
-    const errors = await validate(dto);
+  // -------- Register new admin (BCrypt + Mailer) --------
+  async register(createDto: CreateAdminDto): Promise<Admin> {
+    const existing = await this.adminRepository.findOne({
+      where: { email: createDto.email },
+    });
 
-    if (errors.length > 0) {
-      const messages = errors
-        .map((err) => Object.values(err.constraints ?? {}))
-        .flat()
-        .join(', ');
-      throw new BadRequestException(messages);
+    if (existing) {
+      throw new BadRequestException('Email is already registered');
     }
 
-    const existingAdmin = await this.adminRepository.findOne({
-      where: { email: data.email },
+    const salt = await bcrypt.genSalt();
+    const hashedPassword = await bcrypt.hash(createDto.password, salt);
+
+    const admin = this.adminRepository.create({
+      ...createDto,
+      password: hashedPassword,
+      role: createDto.role ?? 'admin',
+      status: createDto.status ?? AdminStatus.ACTIVE,
     });
-    if (existingAdmin) {
-      throw new BadRequestException('Email already exists!');
+
+    const saved = await this.adminRepository.save(admin);
+
+    // Send simple welcome email (bonus)
+    try {
+      await this.mailerService.sendMail({
+        to: saved.email,
+        subject: 'Admin Account Created',
+        text: `Hi ${saved.fullName}, your admin account is ready.`,
+      });
+    } catch (error) {
+      console.error('Failed to send welcome email:', error?.message ?? error);
     }
 
-    const newAdmin = this.adminRepository.create(data as Admin);
-    return await this.adminRepository.save(newAdmin);
+    return saved;
   }
 
-  async getAllAdmins(): Promise<Admin[]> {
-    return await this.adminRepository.find({
-      order: { createdAt: 'DESC' },
+  // -------- Login (BCrypt + HttpException + JWT) --------
+  async login(loginDto: LoginAdminDto): Promise<{ accessToken: string }> {
+    const admin = await this.adminRepository.findOne({
+      where: { email: loginDto.email },
     });
-  }
 
-  async getAdminById(id: number): Promise<Admin> {
-    const admin = await this.adminRepository.findOne({ where: { id } });
     if (!admin) {
-      throw new NotFoundException(`Admin with ID ${id} not found`);
+      throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
     }
+
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      admin.password,
+    );
+
+    if (!isPasswordValid) {
+      throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
+    }
+
+    const payload = {
+      sub: admin.id,
+      email: admin.email,
+      role: 'admin',
+    };
+
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    return { accessToken };
+  }
+
+  // -------- Basic CRUD --------
+
+  async findAll(status?: AdminStatus): Promise<Admin[]> {
+    const options: any = {
+      relations: ['profile', 'librarians'],
+      order: { createdAt: 'DESC' },
+    };
+
+    if (status) {
+      options.where = { status };
+    }
+
+    return this.adminRepository.find(options);
+  }
+
+  async findOneById(id: number): Promise<Admin> {
+    const admin = await this.adminRepository.findOne({
+      where: { id },
+      relations: ['profile', 'librarians'],
+    });
+
+    if (!admin) {
+      throw new NotFoundException(`Admin with id ${id} not found`);
+    }
+
     return admin;
   }
 
-  async updateAdmin(id: number, data: CreateAdminDto): Promise<Admin> {
-    const admin = await this.getAdminById(id);
+  async update(id: number, dto: UpdateAdminDto): Promise<Admin> {
+    const admin = await this.findOneById(id);
 
-    if (data.email && data.email !== admin.email) {
+    if (dto.email && dto.email !== admin.email) {
       const emailExists = await this.adminRepository.findOne({
-        where: { email: data.email },
+        where: { email: dto.email },
       });
       if (emailExists) {
-        throw new BadRequestException('Email already exists!');
+        throw new BadRequestException('Email is already registered');
       }
     }
 
-    Object.assign(admin, data);
-    return await this.adminRepository.save(admin);
-  }
-
-  async partialUpdateAdmin(
-    id: number,
-    data: Partial<CreateAdminDto>,
-  ): Promise<Admin> {
-    const admin = await this.getAdminById(id);
-
-    if (data.email && data.email !== admin.email) {
-      const emailExists = await this.adminRepository.findOne({
-        where: { email: data.email },
-      });
-      if (emailExists) {
-        throw new BadRequestException('Email already exists!');
-      }
+    if (dto.password) {
+      const salt = await bcrypt.genSalt();
+      dto.password = await bcrypt.hash(dto.password, salt);
     }
 
-    Object.assign(admin, data);
-    return await this.adminRepository.save(admin);
-  }
+    Object.assign(admin, dto);
 
-  async deleteAdmin(id: number): Promise<{ message: string }> {
-    const admin = await this.getAdminById(id);
-    await this.adminRepository.remove(admin);
-    return { message: `Admin with ID ${id} deleted successfully` };
-  }
-
-  async assignRole(id: number, role: string): Promise<Admin> {
-    const admin = await this.getAdminById(id);
-    admin.role = role;
-    return await this.adminRepository.save(admin);
-  }
-
-  async searchAdmins(name: string): Promise<Admin[]> {
-    return await this.adminRepository
-      .createQueryBuilder('admin')
-      .where('LOWER(admin.fullName) LIKE LOWER(:name)', {
-        name: `%${name}%`,
-      })
-      .orWhere('LOWER(admin.email) LIKE LOWER(:name)', { name: `%${name}%` })
-      .orderBy('admin.createdAt', 'DESC')
-      .getMany();
-  }
-  
-  async getInactiveAdmins(): Promise<Admin[]> {
-    return await this.adminRepository.find({
-      where: { status: AdminStatus.INACTIVE },
-      order: { createdAt: 'ASC' },
-    });
+    return this.adminRepository.save(admin);
   }
 
   async changeStatus(id: number, status: AdminStatus): Promise<Admin> {
-    const admin = await this.getAdminById(id);
+    const admin = await this.findOneById(id);
     admin.status = status;
-    return await this.adminRepository.save(admin);
+    return this.adminRepository.save(admin);
   }
 
-  async getAdminsOlderThan40(): Promise<Admin[]> {
-    return await this.adminRepository
+  async remove(id: number): Promise<{ message: string }> {
+    const admin = await this.findOneById(id);
+    await this.adminRepository.remove(admin);
+    return { message: `Admin with id ${id} deleted` };
+  }
+
+  async searchByName(name: string): Promise<Admin[]> {
+    const like = `%${name}%`;
+    return this.adminRepository.find({
+      where: { fullName: Like(like) },
+    });
+  }
+
+  async getAdminsOlderThan(ageLimit: number): Promise<Admin[]> {
+    return this.adminRepository
       .createQueryBuilder('admin')
-      .where('admin.age > :age', { age: 40 })
+      .where('admin.age > :age', { age: ageLimit })
       .orderBy('admin.age', 'DESC')
-      .addOrderBy('admin.createdAt', 'DESC')
       .getMany();
+  }
+
+  // -------- One-to-One: Admin <-> AdminProfile --------
+
+  async upsertProfile(
+    adminId: number,
+    dto: CreateAdminProfileDto,
+  ): Promise<Admin> {
+    const admin = await this.findOneById(adminId);
+
+    if (admin.profile) {
+      admin.profile.address = dto.address ?? admin.profile.address;
+      admin.profile.bio = dto.bio ?? admin.profile.bio;
+      await this.profileRepository.save(admin.profile);
+    } else {
+      const profile = this.profileRepository.create({
+        ...dto,
+        admin,
+      });
+      await this.profileRepository.save(profile);
+      admin.profile = profile;
+    }
+
+    return this.adminRepository.save(admin);
+  }
+
+  async getProfile(adminId: number): Promise<AdminProfile | null> {
+    const admin = await this.findOneById(adminId);
+    return admin.profile ?? null;
+  }
+
+  async deleteProfile(adminId: number): Promise<void> {
+    const admin = await this.findOneById(adminId);
+    if (admin.profile) {
+      await this.profileRepository.remove(admin.profile);
+      admin.profile = undefined;
+      await this.adminRepository.save(admin);
+    }
+  }
+
+  // -------- One-to-Many: Admin <-> LibrarianEntity --------
+
+  async getLibrariansForAdmin(
+    adminId: number,
+  ): Promise<LibrarianEntity[]> {
+    await this.findOneById(adminId); // ensure admin exists
+    return this.librarianRepository.find({
+      where: { supervisor: { id: adminId } },
+      relations: ['supervisor'],
+    });
+  }
+
+  async assignLibrarian(
+    adminId: number,
+    librarianId: number,
+  ): Promise<LibrarianEntity> {
+    const admin = await this.findOneById(adminId);
+
+    const librarian = await this.librarianRepository.findOne({
+      where: { id: librarianId },
+      relations: ['supervisor'],
+    });
+
+    if (!librarian) {
+      throw new NotFoundException(
+        `Librarian with id ${librarianId} not found`,
+      );
+    }
+
+    librarian.supervisor = admin;
+    return this.librarianRepository.save(librarian);
   }
 }

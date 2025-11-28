@@ -1,50 +1,66 @@
 import {
   IsEmail,
-  Matches,
-  MinLength,
-  IsIn,
-  IsNumberString,
   IsString,
+  MinLength,
+  IsNumberString,
   IsInt,
   Min,
   Max,
   IsOptional,
+  IsIn,
 } from 'class-validator';
+import { PartialType } from '@nestjs/mapped-types';
+import { AdminStatus } from '../admin.entity';
 
 export class CreateAdminDto {
-  @IsString({ message: 'Full name must be a string!' })
+  @IsString()
+  @MinLength(2, { message: 'Name must be at least 2 characters long' })
   fullName: string;
 
-  @IsEmail({}, { message: 'Invalid email format!' })
-  @Matches(/@aiub\.edu$/, { message: 'Email must contain aiub.edu domain!' })
+  @IsEmail({}, { message: 'Email is not valid' })
   email: string;
 
-  @MinLength(6, { message: 'Password must be at least 6 characters long!' })
-  @Matches(/^(?=.*[A-Z]).+$/, {
-    message: 'Password must contain at least one uppercase letter!',
-  })
+  @IsString()
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
   password: string;
 
-  @IsIn(['male', 'female'], { message: 'Gender must be male or female!' })
-  gender: string;
-
-  @IsNumberString({}, { message: 'Phone must be a valid number string!' })
+  @IsNumberString({}, { message: 'Phone must contain only digits' })
   phone: string;
 
-  @IsInt({ message: 'Age must be an integer!' })
-  @Min(18, { message: 'Admin must be at least 18 years old!' })
-  @Max(80, { message: 'Age must not exceed 80!' })
+  @IsInt({ message: 'Age must be an integer' })
+  @Min(18, { message: 'Age must be at least 18' })
+  @Max(80, { message: 'Age must not exceed 80' })
   age: number;
 
   @IsOptional()
-  @IsIn(['admin', 'librarian', ], {
-    message: 'Role must be admin, librarian',
+  @IsIn(['admin', 'librarian'], {
+    message: 'Role must be admin or librarian',
   })
   role?: string;
 
   @IsOptional()
   @IsIn(['active', 'inactive'], {
-    message: 'Status must be active or inactive!',
+    message: 'Status must be active or inactive',
   })
-  status?: string;
+  status?: AdminStatus;
+}
+
+export class UpdateAdminDto extends PartialType(CreateAdminDto) {}
+
+export class LoginAdminDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  password: string;
+}
+
+export class CreateAdminProfileDto {
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @IsOptional()
+  @IsString()
+  bio?: string;
 }
