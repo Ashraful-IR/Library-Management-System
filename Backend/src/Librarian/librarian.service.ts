@@ -22,6 +22,9 @@ import { Admin } from '../Admin/admin.entity';
 
 @Injectable()
 export class LibrarianService {
+  searchByPhone(arg0: string) {
+    throw new Error('Method not implemented.');
+  }
   constructor(
     @InjectRepository(LibrarianEntity)
     private readonly librarianRepository: Repository<LibrarianEntity>,
@@ -54,7 +57,7 @@ export class LibrarianService {
 
     const saved = await this.librarianRepository.save(librarian);
 
-    // Mailer (bonus)
+    // Mailer 
     try {
       await this.mailerService.sendMail({
         to: saved.email,
@@ -121,10 +124,35 @@ export class LibrarianService {
     return librarian;
   }
 
-  async update(
-    id: number,
-    dto: UpdateLibrarianDto,
-  ): Promise<LibrarianEntity> {
+  //FindByEmail
+  async findByEmail(email: string): Promise<LibrarianEntity> {
+  const librarian = await this.librarianRepository.findOne({
+    where: { email },
+    relations: ['profile', 'supervisor'], // optional if you need relations
+  });
+
+  if (!librarian) {
+    throw new NotFoundException(`Librarian with email "${email}" not found`);
+  }
+
+  return librarian;
+}
+
+async getLibrarianByPhone(phone: string) {
+  const result = await this.librarianRepository.findOne({
+    where: { phone },
+  });
+
+  if (!result) {
+    throw new NotFoundException(`Librarian not found for phone: ${phone}`);
+  }
+
+  return result;
+}
+
+
+
+  async update(id: number, dto: UpdateLibrarianDto): Promise<LibrarianEntity> {
     const librarian = await this.findOneById(id);
 
     if (dto.email && dto.email !== librarian.email) {
@@ -173,6 +201,13 @@ export class LibrarianService {
       .getMany();
   }
 
+  async removeByEmail(email: string): Promise<{ message: string }> {
+    const librarian = await this.findByEmail(email);
+    await this.librarianRepository.remove(librarian);
+    return { message: `Librarian with email ${email} deleted` };
+  }
+  
+
   // -------- One-to-One: Librarian <-> LibrarianProfile --------
 
   async upsertProfile(
@@ -213,7 +248,9 @@ export class LibrarianService {
     adminId: number,
   ): Promise<LibrarianEntity> {
     const librarian = await this.findOneById(librarianId);
-    const admin = await this.adminRepository.findOne({ where: { id: adminId } });
+    const admin = await this.adminRepository.findOne({
+      where: { id: adminId },
+    });
 
     if (!admin) {
       throw new NotFoundException(`Admin with id ${adminId} not found`);
