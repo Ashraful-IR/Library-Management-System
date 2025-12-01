@@ -15,10 +15,10 @@ import { JwtStrategy } from './admin.strategy';
     TypeOrmModule.forFeature([Admin, AdminProfile, LibrarianEntity]),
     PassportModule,
     JwtModule.register({
-      secret: 'library-secret', // keep same in librarian module
+      secret: 'library-secret',
       signOptions: { expiresIn: '1d' },
     }),
-    // Mailer configuration (simple Gmail SMTP example)
+    
     MailerModule.forRoot({
       transport: {
         host: 'smtp.gmail.com',
@@ -26,12 +26,12 @@ import { JwtStrategy } from './admin.strategy';
         ignoreTLS: true,
         secure: true,
         auth: {
-          user: 'your-gmail-account@gmail.com',
-          pass: 'your-app-password',
+          user: 'shahriar.rafi1406315@gmail.com',
+          pass: 'khmfxlbzqahzbjyp',
         },
       },
       defaults: {
-        from: '"Library" <no-reply@library.com>',
+        from: '"Library" <<shahriar.rafi1406315@gmail.com>>',
       },
     }),
   ],

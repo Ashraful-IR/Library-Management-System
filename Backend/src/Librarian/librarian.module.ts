@@ -14,10 +14,10 @@ import { Admin } from '../Admin/admin.entity';
     TypeOrmModule.forFeature([LibrarianEntity, LibrarianProfile, Admin]),
     PassportModule,
     JwtModule.register({
-      secret: 'library-secret', // keep same as your app
+      secret: 'library-secret', 
       signOptions: { expiresIn: '1d' },
     }),
-    // Mailer config (same style as your sir’s slide)
+  
     MailerModule.forRoot({
       transport: {
         host: 'smtp.gmail.com',
@@ -25,12 +25,12 @@ import { Admin } from '../Admin/admin.entity';
         ignoreTLS: true,
         secure: true,
         auth: {
-          user: 'your-gmail-account@gmail.com',
-          pass: 'your-app-password',
+          user: 'shahriar.rafi1406315@gmail.com',
+          pass: 'khmfxlbzqahzbjyp',
         },
       },
       defaults: {
-        from: '"Library" <no-reply@library.com>',
+        from: '"Library" <shahriar.rafi1406315@gmail.com>',
       },
     }),
   ],

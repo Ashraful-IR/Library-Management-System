@@ -29,7 +29,6 @@ import { JwtAuthGuard } from './admin.guard';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  // -------- Auth --------
 
   @Post('register')
   @UsePipes(new ValidationPipe({ whitelist: true }))
@@ -43,7 +42,6 @@ export class AdminController {
     return this.adminService.login(loginDto);
   }
 
-  // -------- Basic CRUD (protected by JWT guard) --------
 
   @UseGuards(JwtAuthGuard)
   @Get()
@@ -99,7 +97,7 @@ export class AdminController {
     return this.adminService.remove(id);
   }
 
-  // -------- One-to-One: Admin <-> AdminProfile --------
+  // One-to-One: Admin <-> AdminProfile
 
   @UseGuards(JwtAuthGuard)
   @Put(':id/profile')
@@ -123,7 +121,7 @@ export class AdminController {
     return this.adminService.deleteProfile(id);
   }
 
-  // -------- One-to-Many: Admin <-> LibrarianEntity --------
+  // One-to-Many: Admin <-> LibrarianEntity
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/librarians')

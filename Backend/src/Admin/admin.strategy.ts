@@ -12,8 +12,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  // Here we just return the payload as "user"
-  // { sub, email, role } – works for both admin and librarian
+
   async validate(payload: { sub: number; email: string; role: string }) {
     return payload;
   }

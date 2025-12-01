@@ -33,7 +33,7 @@ export class AdminService {
     private readonly mailerService: MailerService,
   ) {}
 
-  // -------- Register new admin (BCrypt + Mailer) --------
+
   async register(createDto: CreateAdminDto): Promise<Admin> {
     const existing = await this.adminRepository.findOne({
       where: { email: createDto.email },
@@ -55,7 +55,6 @@ export class AdminService {
 
     const saved = await this.adminRepository.save(admin);
 
-    // Send simple welcome email (bonus)
     try {
       await this.mailerService.sendMail({
         to: saved.email,
@@ -67,39 +66,44 @@ export class AdminService {
     }
 
     return saved;
+    /* return {
+    email: saved.email,
+  };*/
   }
 
-  // -------- Login (BCrypt + HttpException + JWT) --------
-  async login(loginDto: LoginAdminDto): Promise<{ accessToken: string }> {
-    const admin = await this.adminRepository.findOne({
-      where: { email: loginDto.email },
-    });
 
-    if (!admin) {
-      throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
-    }
+  async login(loginDto: LoginAdminDto): Promise<{ message: string; accessToken: string }> {
+  const admin = await this.adminRepository.findOne({
+    where: { email: loginDto.email },
+  });
 
-    const isPasswordValid = await bcrypt.compare(
-      loginDto.password,
-      admin.password,
-    );
-
-    if (!isPasswordValid) {
-      throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
-    }
-
-    const payload = {
-      sub: admin.id,
-      email: admin.email,
-      role: 'admin',
-    };
-
-    const accessToken = await this.jwtService.signAsync(payload);
-
-    return { accessToken };
+  if (!admin) {
+    throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
   }
 
-  // -------- Basic CRUD --------
+  const isPasswordValid = await bcrypt.compare(
+    loginDto.password,
+    admin.password,
+  );
+
+  if (!isPasswordValid) {
+    throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
+  }
+
+  const payload = {
+    sub: admin.id,
+    email: admin.email,
+    role: 'admin',
+  };
+
+  const accessToken = await this.jwtService.signAsync(payload);
+
+  return {
+    message: 'Login successful',
+    accessToken,
+  };
+}
+
 
   async findAll(status?: AdminStatus): Promise<Admin[]> {
     const options: any = {
@@ -176,8 +180,6 @@ export class AdminService {
       .getMany();
   }
 
-  // -------- One-to-One: Admin <-> AdminProfile --------
-
   async upsertProfile(
     adminId: number,
     dto: CreateAdminProfileDto,
@@ -214,12 +216,12 @@ export class AdminService {
     }
   }
 
-  // -------- One-to-Many: Admin <-> LibrarianEntity --------
+
 
   async getLibrariansForAdmin(
     adminId: number,
   ): Promise<LibrarianEntity[]> {
-    await this.findOneById(adminId); // ensure admin exists
+    await this.findOneById(adminId);
     return this.librarianRepository.find({
       where: { supervisor: { id: adminId } },
       relations: ['supervisor'],
