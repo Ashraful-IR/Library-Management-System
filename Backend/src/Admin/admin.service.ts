@@ -87,7 +87,7 @@ export class AdminService {
   );
 
   if (!isPasswordValid) {
-    throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
+    throw new HttpException('Invalid crede', HttpStatus.UNAUTHORIZED);
   }
 
   const payload = {

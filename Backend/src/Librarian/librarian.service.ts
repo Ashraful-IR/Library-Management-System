@@ -19,6 +19,7 @@ import {
   CreateLibrarianProfileDto,
 } from './dto/create-librarian.dto';
 import { Admin } from '../Admin/admin.entity';
+import { query } from 'express';
 
 @Injectable()
 export class LibrarianService {
@@ -33,7 +34,7 @@ export class LibrarianService {
     private readonly mailerService: MailerService,
   ) {}
 
-  // -------- Register librarian --------
+  //Register librarian
 
   async register(createDto: CreateLibrarianDto): Promise<LibrarianEntity> {
     const existing = await this.librarianRepository.findOne({
@@ -54,7 +55,7 @@ export class LibrarianService {
 
     const saved = await this.librarianRepository.save(librarian);
 
-    // Mailer (bonus)
+    // Mailer
     try {
       await this.mailerService.sendMail({
         to: saved.email,
@@ -68,7 +69,7 @@ export class LibrarianService {
     return saved;
   }
 
-  // -------- Login (Bcrypt + HttpException) --------
+  // Login (Bcrypt + HttpException)
 
   async login(loginDto: LoginLibrarianDto): Promise<{ accessToken: string }> {
     const librarian = await this.librarianRepository.findOne({
@@ -76,7 +77,7 @@ export class LibrarianService {
     });
 
     if (!librarian) {
-      throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
+      throw new HttpException('Invalid user', HttpStatus.UNAUTHORIZED);
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -85,7 +86,7 @@ export class LibrarianService {
     );
 
     if (!isPasswordValid) {
-      throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
+      throw new HttpException('mail', HttpStatus.UNAUTHORIZED);
     }
 
     const payload = {
@@ -99,7 +100,7 @@ export class LibrarianService {
     return { accessToken };
   }
 
-  // -------- Basic CRUD --------
+  // Basic CRUD
 
   async findAll(): Promise<LibrarianEntity[]> {
     return this.librarianRepository.find({
@@ -121,10 +122,33 @@ export class LibrarianService {
     return librarian;
   }
 
-  async update(
-    id: number,
-    dto: UpdateLibrarianDto,
-  ): Promise<LibrarianEntity> {
+  //FindByEmail
+  async findByEmail(email: string): Promise<LibrarianEntity> {
+    const librarian = await this.librarianRepository.findOne({
+      where: { email },
+      relations: ['profile', 'supervisor'], // optional if you need relations
+    });
+
+    if (!librarian) {
+      throw new NotFoundException(`Librarian with email "${email}" not found`);
+    }
+
+    return librarian;
+  }
+
+  async getLibrarianByPhone(phone: string) {
+    const result = await this.librarianRepository.findOne({
+      where: { phone },
+    });
+
+    if (!result) {
+      throw new NotFoundException(`Librarian not found for phone: ${phone}`);
+    }
+
+    return result;
+  }
+
+  async update(id: number, dto: UpdateLibrarianDto): Promise<LibrarianEntity> {
     const librarian = await this.findOneById(id);
 
     if (dto.email && dto.email !== librarian.email) {
@@ -161,19 +185,46 @@ export class LibrarianService {
     return { message: `Librarian with id ${id} deleted` };
   }
 
+  async searchByPhone(phone: string): Promise<LibrarianEntity[]> {
+    const queryValue = `%${phone}%`;
+
+    console.log('QUERY PHONE:', queryValue);
+
+    return this.librarianRepository
+      .createQueryBuilder('librarian')
+      .where('librarian.phone LIKE :phone', { phone: queryValue })
+      .getMany();
+  }
+
   async searchByName(name: string): Promise<LibrarianEntity[]> {
+    const queryValue = `%${name}%`;
+
+    console.log('QUERY NAME:', queryValue);
+
     return this.librarianRepository
       .createQueryBuilder('librarian')
       .where('LOWER(librarian.firstName) LIKE LOWER(:name)', {
-        name: `%${name}%`,
+        name: queryValue,
       })
       .orWhere('LOWER(librarian.lastName) LIKE LOWER(:name)', {
-        name: `%${name}%`,
+        name: queryValue,
       })
       .getMany();
   }
 
-  // -------- One-to-One: Librarian <-> LibrarianProfile --------
+  async removeByEmail(email: string): Promise<{ message: string }> {
+    const librarian = await this.findByEmail(email);
+    await this.librarianRepository.remove(librarian);
+    return { message: `Librarian with email ${email} deleted` };
+  }
+
+  async removeByPhone(phone: string): Promise<{ message: string }> {
+    const librarian = await this.getLibrarianByPhone(phone);
+    await this.librarianRepository.remove(librarian);
+    return { message: `Librarian with phone ${phone} deleted` };
+  }
+
+  //  One-to-One: Librarian <-> LibrarianProfile
 
   async upsertProfile(
     librarianId: number,
@@ -206,14 +257,16 @@ export class LibrarianService {
     }
   }
 
-  // -------- One-to-Many: Admin <-> Librarian (Many side here) --------
+  //  One-to-Many: Admin <-> Librarian
 
   async assignSupervisor(
     librarianId: number,
     adminId: number,
   ): Promise<LibrarianEntity> {
     const librarian = await this.findOneById(librarianId);
-    const admin = await this.adminRepository.findOne({ where: { id: adminId } });
+    const admin = await this.adminRepository.findOne({
+      where: { id: adminId },
+    });
 
     if (!admin) {
       throw new NotFoundException(`Admin with id ${adminId} not found`);

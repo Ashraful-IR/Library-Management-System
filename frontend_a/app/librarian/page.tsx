@@ -1,9 +1,9 @@
-import Title from "@/components/title";
-
+import Title from "@/Content/Title";
+import React from "react";
 export default function LibrarianPage() {
   return (
     <div>
-      <Title text="Librarian Dashboard" />
+      <Title title="Librarian Dashboard" />
       <p>This is the librarian dashboard.</p>
     </div>
   );

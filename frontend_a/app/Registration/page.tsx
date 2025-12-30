@@ -1,9 +1,13 @@
+
 "use client";
 
 import { useState } from "react";
 import { z } from "zod";
-import Title from "@/components/title";
-import Input from "@/components/Input";
+import Title from "@/Content/Title";
+import  Input  from "@/Content/Input";
+import React from "react";
+import Link from "next/link";
+
 
 
 
@@ -155,7 +159,7 @@ export default function RegisterPage() {
 
   return (
     <div>
-      <Title text="Register" />
+      <Title title="Register" />
 
       <div style={{ marginBottom: "12px" }}>
         <label>Register as</label>
@@ -284,6 +288,7 @@ export default function RegisterPage() {
         {errors.form ? <p style={{ color: "red" }}>{errors.form}</p> : null}
 
         <button type="submit">Register</button>
+        <p>Already have an account? <Link href="/LogIn">Login</Link></p>
       </form>
 
       {success ? (
