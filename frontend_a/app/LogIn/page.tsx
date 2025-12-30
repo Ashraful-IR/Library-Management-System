@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
-import Title from "@/components/title";
-import Input from "@/components/Input";
+import Title from "@/Content/Title";
+import Input from "@/Content/Input";
+import Link from "next/link";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email"),
@@ -40,7 +41,7 @@ export default function LoginPage() {
 
   return (
     <div>
-      <Title text="Login" />
+      <Title title="Login" />
 
       <label>Login as</label><br />
       <select value={role} onChange={e => setRole(e.target.value as any)}>
@@ -52,6 +53,7 @@ export default function LoginPage() {
         <Input label="Email" name="email" value={form.email} onChange={handleChange} error={errors.email} />
         <Input label="Password" name="password" type="password" value={form.password} onChange={handleChange} error={errors.password} />
         <button type="submit">Login</button>
+        <p>Dont have an account? <Link href="/Registration">Register</Link></p>
       </form>
     </div>
   );

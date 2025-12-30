@@ -21,6 +21,7 @@ import {
   CreateLibrarianProfileDto,
 } from './dto/create-librarian.dto';
 import { JwtAuthGuard } from '../Admin/admin.guard';
+import { query } from 'express';
 
 @Controller('librarian')
 export class LibrarianController {
@@ -49,9 +50,14 @@ export class LibrarianController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Get('search')
-  search(@Query('name') name: string) {
-    return this.librarianService.searchByName(name ?? '');
+  @Get('search/:query')
+  search(@Query('query') query: string) {
+    return this.librarianService.searchByName(query);
+  }
+  
+  @Get('phone/:phone')
+  searchByPhone(@Param('phone') phone: string) {
+    return this.librarianService.searchByPhone(phone);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -103,6 +109,12 @@ export class LibrarianController {
   @Delete('email/:email')
   removeByEmail(@Param('email') email: string) {
     return this.librarianService.removeByEmail(email);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('phone/:phone')
+  removeByPhone(@Param('phone') phone: string) {
+    return this.librarianService.removeByPhone(phone);
   }
 
   // ---------- One-to-One Profile ----------
