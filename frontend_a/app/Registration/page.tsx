@@ -1,15 +1,13 @@
-
 "use client";
 
 import { useState } from "react";
 import { z } from "zod";
 import Title from "@/Content/Title";
-import  Input  from "@/Content/Input";
+import Input from "@/Content/Input";
 import React from "react";
 import Link from "next/link";
-
-
-
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
 const adminSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters long"),
@@ -44,7 +42,6 @@ const librarianSchema = z.object({
   isActive: z.coerce.boolean(),
 });
 
-
 function zodToErrors(error: z.ZodError) {
   const err: Record<string, string> = {};
   error.issues.forEach((i) => {
@@ -55,11 +52,15 @@ function zodToErrors(error: z.ZodError) {
 }
 
 export default function RegisterPage() {
+  const router = useRouter();
+
   const [type, setType] = useState<"admin" | "librarian">("admin");
   const [success, setSuccess] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
 
- 
+  const API = process.env.NEXT_PUBLIC_API_ENDPOINT;
+
   const [form, setForm] = useState<any>({
     // admin
     fullName: "",
@@ -70,6 +71,7 @@ export default function RegisterPage() {
     role: "",     // optional
     status: "",   // optional
 
+    // librarian
     firstName: "",
     lastName: "",
     designation: "",
@@ -84,77 +86,116 @@ export default function RegisterPage() {
     }));
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function getAxiosErrorMessage(error: unknown) {
+    if (axios.isAxiosError(error)) {
+      const data: any = error.response?.data;
+      const msg = data?.message ?? data?.error ?? error.message;
+      return Array.isArray(msg) ? msg.join(", ") : String(msg);
+    }
+    return "Something went wrong";
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrors({});
     setSuccess(false);
 
-    if (type === "admin") {
-    
-      const adminData = {
-        fullName: form.fullName,
+    if (!API) {
+      setErrors({ form: "Missing NEXT_PUBLIC_API_ENDPOINT in .env/.env.local" });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (type === "admin") {
+        // ✅ keep same attributes
+        const adminData = {
+          fullName: form.fullName,
+          email: form.email,
+          password: form.password,
+          phone: form.phone,
+          age: form.age,
+          role: form.role ? form.role : undefined,
+          status: form.status ? form.status : undefined,
+        };
+
+        // ✅ keep zod
+        const result = adminSchema.safeParse(adminData);
+        if (!result.success) {
+          setErrors(zodToErrors(result.error));
+          return;
+        }
+          
+        // ✅ important: send result.data (age becomes number) to match DTO
+        const response = await axios.post(`${API}/admin/register`, result.data);
+
+        const jsonData = response.data; // PPT style
+        console.log("ADMIN REGISTER RESPONSE:", jsonData);
+
+        setSuccess(true);
+
+        // keep your reset logic
+        setForm((prev: any) => ({
+          ...prev,
+          fullName: "",
+          email: "",
+          password: "",
+          phone: "",
+          age: "",
+          role: "",
+          status: "",
+        }));
+
+        // ✅ redirect to login after success
+        setTimeout(() => router.push("/LogIn"), 700);
+        return;
+      }
+
+      // librarian
+      const librarianData = {
+        firstName: form.firstName,
+        lastName: form.lastName,
         email: form.email,
         password: form.password,
         phone: form.phone,
         age: form.age,
-        
-        role: form.role ? form.role : undefined,
-        status: form.status ? form.status : undefined,
+        designation: form.designation,
+        isActive: form.isActive,
       };
 
-      const result = adminSchema.safeParse(adminData);
+      const result = librarianSchema.safeParse(librarianData);
       if (!result.success) {
         setErrors(zodToErrors(result.error));
         return;
       }
 
-    
+      const response = await axios.post(`${API}/librarian/register`, result.data);
+
+      const jsonData = response.data; // PPT style
+      console.log("LIBRARIAN REGISTER RESPONSE:", jsonData);
+
       setSuccess(true);
 
       setForm((prev: any) => ({
         ...prev,
-        fullName: "",
+        firstName: "",
+        lastName: "",
         email: "",
         password: "",
         phone: "",
         age: "",
-        role: "",
-        status: "",
+        designation: "",
+        isActive: true,
       }));
-      return;
+
+      setTimeout(() => router.push("/LogIn"), 700);
+    } catch (error) {
+      // ✅ show backend insertion errors here
+      setErrors({ form: getAxiosErrorMessage(error) });
+    } finally {
+      setLoading(false);
     }
-
-    const librarianData = {
-      firstName: form.firstName,
-      lastName: form.lastName,
-      email: form.email,
-      password: form.password,
-      phone: form.phone,
-      age: form.age,
-      designation: form.designation,
-      isActive: form.isActive,
-    };
-
-    const result = librarianSchema.safeParse(librarianData);
-    if (!result.success) {
-      setErrors(zodToErrors(result.error));
-      return;
-    }
-
-    setSuccess(true);
-
-    
-    setForm((prev: any) => ({
-      ...prev,
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
-      phone: "",
-      age: "",
-      designation: "",
-      isActive: true,
-    }));
   }
 
   return (
@@ -220,7 +261,6 @@ export default function RegisterPage() {
               onChange={handleChange}
               error={errors.age}
             />
-
           </>
         ) : (
           <>
@@ -280,15 +320,18 @@ export default function RegisterPage() {
               onChange={handleChange}
               error={errors.designation}
             />
-
-           
           </>
         )}
 
+        {/* ✅ backend error message */}
         {errors.form ? <p style={{ color: "red" }}>{errors.form}</p> : null}
 
-        <button type="submit">Register</button>
-        <p>Already have an account? <Link href="/LogIn">Login</Link></p>
+        <button type="submit" disabled={loading}>
+          {loading ? "Registering..." : "Register"}
+        </button>
+        <p>
+          Already have an account? <Link href="/LogIn">Login</Link>
+        </p>
       </form>
 
       {success ? (

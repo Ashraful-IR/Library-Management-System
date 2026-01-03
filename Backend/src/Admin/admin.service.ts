@@ -78,7 +78,7 @@ export class AdminService {
   });
 
   if (!admin) {
-    throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
+    throw new HttpException('Invalid Email', HttpStatus.UNAUTHORIZED);
   }
 
   const isPasswordValid = await bcrypt.compare(
@@ -87,7 +87,7 @@ export class AdminService {
   );
 
   if (!isPasswordValid) {
-    throw new HttpException('Invalid crede', HttpStatus.UNAUTHORIZED);
+    throw new HttpException('Invalid Password', HttpStatus.UNAUTHORIZED);
   }
 
   const payload = {
