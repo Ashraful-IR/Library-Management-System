@@ -40,7 +40,7 @@ export default function LoginPage() {
     e.preventDefault();
     setErrors({});
 
-    // ✅ keep Zod validation
+    //Zod validation
     const result = loginSchema.safeParse(form);
     if (!result.success) {
       const err: any = {};
@@ -60,10 +60,10 @@ export default function LoginPage() {
       const url =
         role === "admin" ? `${API}/admin/login` : `${API}/librarian/login`;
 
-      // ✅ Axios POST (PPT style)
+      //Axios POST (PPT style)
       const response = await axios.post(url, result.data);
 
-      // ✅ extract AXIOS response.data (PPT style)
+      // extract AXIOS response.data (PPT style)
       const jsonData = response.data;
       console.log("LOGIN RESPONSE:", jsonData);
 

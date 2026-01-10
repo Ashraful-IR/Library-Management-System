@@ -109,7 +109,7 @@ export default function RegisterPage() {
 
     try {
       if (type === "admin") {
-        // ✅ keep same attributes
+        // keep same attributes
         const adminData = {
           fullName: form.fullName,
           email: form.email,
@@ -120,14 +120,14 @@ export default function RegisterPage() {
           status: form.status ? form.status : undefined,
         };
 
-        // ✅ keep zod
+        //  zod
         const result = adminSchema.safeParse(adminData);
         if (!result.success) {
           setErrors(zodToErrors(result.error));
           return;
         }
-          
-        // ✅ important: send result.data (age becomes number) to match DTO
+
+        // send result.data (age becomes number) to match DTO
         const response = await axios.post(`${API}/admin/register`, result.data);
 
         const jsonData = response.data; // PPT style
@@ -147,7 +147,7 @@ export default function RegisterPage() {
           status: "",
         }));
 
-        // ✅ redirect to login after success
+        // redirect to login after success
         setTimeout(() => router.push("/LogIn"), 700);
         return;
       }
@@ -191,7 +191,7 @@ export default function RegisterPage() {
 
       setTimeout(() => router.push("/LogIn"), 700);
     } catch (error) {
-      // ✅ show backend insertion errors here
+      // show backend insertion errors here
       setErrors({ form: getAxiosErrorMessage(error) });
     } finally {
       setLoading(false);
@@ -323,7 +323,7 @@ export default function RegisterPage() {
           </>
         )}
 
-        {/* ✅ backend error message */}
+        {/* backend error message */}
         {errors.form ? <p style={{ color: "red" }}>{errors.form}</p> : null}
 
         <button type="submit" disabled={loading}>
