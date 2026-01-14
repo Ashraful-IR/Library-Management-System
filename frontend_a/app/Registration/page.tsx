@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
+
 const adminSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters long"),
   email: z.string().email("Email is not valid"),
